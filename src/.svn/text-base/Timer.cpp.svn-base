@@ -1,0 +1,94 @@
+//
+//  Timer.cpp
+//  AlgatorC
+//
+//  Created by Tadej Golobič on 01/07/15.
+//  Copyright © 2015 Tadej Golobič. All rights reserved.
+//
+
+#include "Timer.hpp"
+
+Timer::Timer()
+{
+    curr_timer = 0;
+    for (int i = 0; i<MAX_TIMERS; i++)
+    {
+        start_time[i] = 0;
+        stop_time[i] = 0;
+    }
+}
+
+void Timer::start()
+{
+    start(curr_timer);
+}
+
+void Timer::start(const int &i)
+{
+    if (i <= MAX_TIMERS && i >= 0)
+    {
+        start_time[i] = std::clock();
+    }
+    else
+    {
+        LOG(WARNING) << __FILE__ << "(" << __LINE__ << ") : Null pointer exception in start timer. Given parameter => " << i << ". MAX timers => " << MAX_TIMERS;
+    }
+}
+
+void Timer::stop()
+{
+    stop(curr_timer);
+}
+
+void Timer::stop(const int &i)
+{
+    if (i <= MAX_TIMERS && i >= 0)
+    {
+        stop_time[i] = std::clock();
+    }
+    else
+    {
+        LOG(WARNING) << __FILE__ << "(" << __LINE__ << ") : Null pointer exception in stop timer. Given parameter => " << i << ". MAX timers => " << MAX_TIMERS;
+    }
+}
+
+void Timer::resume()
+{
+    resume(curr_timer);
+}
+
+void Timer::resume(const int &i)
+{
+    if (i <= MAX_TIMERS && i >= 0)
+    {
+        start_time[i] = std::clock() - start_time[i];
+    }
+    else
+    {
+        LOG(WARNING) << __FILE__ << "(" << __LINE__ << ") : Null pointer exception in resume timer. Given parameter => " << i << ". MAX timers => " << MAX_TIMERS;
+    }
+}
+
+void Timer::next()
+{
+    stop();
+    curr_timer++;
+    if (curr_timer > MAX_TIMERS)
+    {
+        LOG(ERROR) << __FILE__ << "(" << __LINE__ << ") : Current timer is higher than MAX timers. Current timer is " << curr_timer << " and MAX timers is " << MAX_TIMERS;
+    }
+    else
+    {
+        start();
+    }
+}
+
+double Timer::time()
+{
+    return time(curr_timer);
+}
+
+double Timer::time(const int &i)
+{
+    return ((stop_time[i] - start_time[i]) /(double)CLOCKS_PER_SEC) * 1000;
+}

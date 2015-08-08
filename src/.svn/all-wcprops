@@ -1,0 +1,155 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/golobich/algatorc/!svn/ver/2/trunk/src
+END
+JSONValue.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/golobich/algatorc/!svn/ver/2/trunk/src/JSONValue.cpp
+END
+JSON.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/golobich/algatorc/!svn/ver/2/trunk/src/JSON.cpp
+END
+TestSetIterator.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/golobich/algatorc/!svn/ver/2/trunk/src/TestSetIterator.hpp
+END
+JSONValue.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 53
+/golobich/algatorc/!svn/ver/2/trunk/src/JSONValue.hpp
+END
+TestCase.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/golobich/algatorc/!svn/ver/2/trunk/src/TestCase.cpp
+END
+Entity.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/golobich/algatorc/!svn/ver/2/trunk/src/Entity.cpp
+END
+AbsAlgorithm.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/golobich/algatorc/!svn/ver/2/trunk/src/AbsAlgorithm.cpp
+END
+JSON.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/golobich/algatorc/!svn/ver/2/trunk/src/JSON.hpp
+END
+TestCase.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/golobich/algatorc/!svn/ver/2/trunk/src/TestCase.hpp
+END
+Timer.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/golobich/algatorc/!svn/ver/2/trunk/src/Timer.cpp
+END
+Entity.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/golobich/algatorc/!svn/ver/2/trunk/src/Entity.hpp
+END
+AbsAlgorithm.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/golobich/algatorc/!svn/ver/2/trunk/src/AbsAlgorithm.hpp
+END
+EParameter.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/golobich/algatorc/!svn/ver/2/trunk/src/EParameter.cpp
+END
+Timer.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 49
+/golobich/algatorc/!svn/ver/2/trunk/src/Timer.hpp
+END
+Log.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 47
+/golobich/algatorc/!svn/ver/2/trunk/src/Log.hpp
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/golobich/algatorc/!svn/ver/2/trunk/src/Makefile.am
+END
+EParameter.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 54
+/golobich/algatorc/!svn/ver/2/trunk/src/EParameter.hpp
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/golobich/algatorc/!svn/ver/2/trunk/src/Makefile
+END
+ParameterSet.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/golobich/algatorc/!svn/ver/2/trunk/src/ParameterSet.cpp
+END
+algatorc.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/golobich/algatorc/!svn/ver/2/trunk/src/algatorc.cpp
+END
+ETestSet.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/golobich/algatorc/!svn/ver/2/trunk/src/ETestSet.cpp
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/golobich/algatorc/!svn/ver/2/trunk/src/Makefile.in
+END
+ParameterSet.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 56
+/golobich/algatorc/!svn/ver/2/trunk/src/ParameterSet.hpp
+END
+ETestSet.hpp
+K 25
+svn:wc:ra_dav:version-url
+V 52
+/golobich/algatorc/!svn/ver/2/trunk/src/ETestSet.hpp
+END
+TestSetIterator.cpp
+K 25
+svn:wc:ra_dav:version-url
+V 59
+/golobich/algatorc/!svn/ver/2/trunk/src/TestSetIterator.cpp
+END

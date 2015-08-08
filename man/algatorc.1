@@ -1,0 +1,39 @@
+.TH algatorc 1 "15. July 2015" "version 0.1"
+.SH NAME
+.B algatorc
+- Preveri pravilnost delovanja algoritma
+.SH SYNOPSIS
+.B algatorc 
+.I [option...][names...]
+.SH DESCRIPTION
+.B algatorc
+je sistem za izvajanje algoritmov na podanih testnih podatkih ter analizo rezultatov izvajanja. 
+.PP
+Sistem omogoča dodajanje in upravljanje s poljubnim številom projektov. V okviru enega projekta je definiran problem, testne množice vhodnih podatkov ter način reševanja nalog tega problema. Projekt lahko vsebuje poljubno število algoritmov, ki naloge rešujejo na predpisan način. Sistem omogoča analizo izvajanja posameznega algoritma ter primerjavo med algoritmi istega projekta. 
+.SH OPTIONS
+Možne so naslednje opcije:
+.PP
+.B -a --add_algorithm
+.I project_name algorithm_name ...
+Doda algoritem k že obstoječemu projektu. Če direktorijska struktura za algoritme še ne obstaja, jo bo program ustvaril sam
+.PP
+.B -e --execute
+.I project_name algorithm_name test_set
+Na podani testni množici izvede algoritem, ki se nahaja v podanem projektu
+.PP
+.B -n --new_project
+.I project_name
+V trenutnem direktoriju ustvari nov 
+.B algatorc
+projekt. Prav tako se ustvari datotečna struktura za podan projekt
+.PP
+.B -h --help
+Display a help message
+.PP
+.B -v --version
+Izpiše verzijo programa
+.SH EXIT STATUS
+.B algatorc
+exits 0 on success, and >0 if an error occurs.
+.SH AUTHOR
+Tadej Golobič, tadej.golobic@icloud.com

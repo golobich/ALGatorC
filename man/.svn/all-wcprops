@@ -1,0 +1,29 @@
+K 25
+svn:wc:ra_dav:version-url
+V 39
+/golobich/algatorc/!svn/ver/2/trunk/man
+END
+Makefile.am
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/golobich/algatorc/!svn/ver/2/trunk/man/Makefile.am
+END
+algatorc.1
+K 25
+svn:wc:ra_dav:version-url
+V 50
+/golobich/algatorc/!svn/ver/2/trunk/man/algatorc.1
+END
+Makefile
+K 25
+svn:wc:ra_dav:version-url
+V 48
+/golobich/algatorc/!svn/ver/2/trunk/man/Makefile
+END
+Makefile.in
+K 25
+svn:wc:ra_dav:version-url
+V 51
+/golobich/algatorc/!svn/ver/2/trunk/man/Makefile.in
+END

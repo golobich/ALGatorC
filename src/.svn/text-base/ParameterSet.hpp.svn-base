@@ -1,0 +1,59 @@
+//
+//  ParameterSet.h
+//  AlgatorC
+//
+//  Created by Tadej Golobič on 28/06/15.
+//  Copyright © 2015 Tadej Golobič. All rights reserved.
+//
+
+#ifndef ParameterSet_h
+#define ParameterSet_h
+
+#include <vector>
+#include "EParameter.hpp"
+#include "Log.hpp"
+
+class ParameterSet
+{
+public:
+    //! Default constructor. Initialize class
+    ParameterSet() {}
+    
+    //! Create vector of added parameters
+    //! \param params
+    ParameterSet(ParameterSet&);
+    
+    //! Add parameter to vector of parameters.
+    //! \param param
+    //! \param replace_existing If adding parameter is already in vector and this parameter is set to true, then existing parameter is replaced with a new one
+    void addParameter(EParameter&, bool);
+    
+    //! Add parameters to vector of parameters.
+    //! \param params
+    //! \param replace_existing If parameter is already in vector and this parameter is set to true, then existing parameter is replaced with a new one
+    void addParameters(ParameterSet&, bool);
+    
+    //! Get parameter at specified position
+    //! \param i
+    //! \return EParameter* If specified position is between 0 and size of vector, then the pointer to parameter is returned. Otherwise, function returns null pointer
+    EParameter *getParameter(const int&);
+    
+    //! Get parameter with specified name
+    //! \param name
+    //! \return EParameter* If specified name is valid, then function returns pointer to EParameter, otherwise, function returns null pointer
+    EParameter *getParameter(const std::string&);
+    
+    //! Return size of vector
+    //! \return size_t
+    size_t size();
+    
+    //! Print ParameterSet
+    std::string print();
+    
+private:
+    std::vector<EParameter> parameters;
+    
+    
+};
+
+#endif /* ParameterSet_h */

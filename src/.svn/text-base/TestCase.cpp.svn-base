@@ -1,0 +1,26 @@
+//
+//  TestCase.cpp
+//  AlgatorC
+//
+//  Created by Tadej Golobič on 28/06/15.
+//  Copyright © 2015 Tadej Golobič. All rights reserved.
+//
+#include "TestCase.hpp"
+
+ParameterSet TestCase::getParameters()
+{
+    return parameters;
+}
+
+void TestCase::addParameter(EParameter &param)
+{
+    parameters.addParameter(param, true);
+}
+
+std::string TestCase::print()
+{
+    return parameters.print();
+}
+
+
+

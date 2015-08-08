@@ -1,0 +1,513 @@
+//
+//  main.cpp
+//  AlgatorC
+//
+//  Created by Tadej Golobič on 28/06/15.
+//  Copyright © 2015 Tadej Golobič. All rights reserved.
+//
+#define LOGGING_LEVEL_1
+
+#include <iostream>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#include <unistd.h>
+#include <cstdlib>
+#include <fstream>
+#include "AbsAlgorithm.hpp"
+#include "ETestSet.hpp"
+#include "TestSetIterator.hpp"
+#include "Log.hpp"
+#include <string>
+#include <exception>
+#include <typeinfo>
+#include <stdexcept>
+#include <string>
+_INITIALIZE_EASYLOGGINGPP
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+    AbsAlgorithm* (*create_alg)();
+    void (*destroy_alg)(AbsAlgorithm*);
+
+    TestSetIterator* (*create_it)();
+    void (*destroy_it)(TestSetIterator*);
+#ifdef __cplusplus
+}
+#endif
+
+const char *ALGATOR_ROOT = "ALGATOR_ROOT";
+
+bool execute_system_command(const char *cmd)
+{
+    const int err = system(cmd);
+    if (err == -1)
+    {
+        LOG(ERROR) << "Error occured while trying to execute command " << cmd;
+        return false;
+    }
+    return true;
+}
+
+bool build_lib(const std::string &lib_name, const std::string &source)
+{
+    struct tm *lib_clock, *src_clock;
+    struct stat lib_attrib, src_attrib;
+
+    stat(lib_name.c_str(), &lib_attrib);
+    lib_clock = gmtime(&(lib_attrib.st_mtime));
+    time_t lib_time = mktime(lib_clock);
+
+    stat(source.c_str(), &src_attrib);
+    src_clock = gmtime(&(src_attrib.st_mtime));
+    time_t src_time = mktime(src_clock);
+
+    if (difftime(lib_time, src_time) < 0)
+        return true;
+    return false;
+}
+
+bool build_project_shared_library(const char *proj_name, const char *alg_name)
+{
+    std::string proj_dir = getenv(ALGATOR_ROOT); proj_dir.append("/data_root/projects/PROJ-");
+    proj_dir.append(proj_name); proj_dir.append("/");
+    //g++ -std=gnu++11 -fPIC ../proj/src/* ../algs/ALG-BubbleSort/src/BubbleSortAlgorithm.cpp -shared -o libProject.so -Wl,--whole-archive -lAlgatorc -Wl,--no-whole-archive
+    std::string ld = "g++ -std=gnu++11 -fPIC "; ld.append(proj_dir); ld.append("algs/ALG-");
+    ld.append(alg_name); ld.append("/src/"); ld.append(alg_name); ld.append("Algorithm.cpp ");
+    ld.append(proj_dir); ld.append("proj/src/"); ld.append(proj_name); ld.append("AbsAlgorithm.cpp ");
+    ld.append(proj_dir); ld.append("proj/src/"); ld.append(proj_name); ld.append("TestCase.cpp ");
+    ld.append(proj_dir); ld.append("proj/src/"); ld.append(proj_name); ld.append("TestSetIterator.cpp ");
+    ld.append("-shared -o "); ld.append(proj_dir); ld.append("lib/"); ld.append("libProject.so -Wl,--whole-archive -lAlgatorc -Wl,--no-whole-archive");
+
+    return execute_system_command(ld.c_str());
+}
+
+void print_dir(const std::string &dir)
+{
+    struct stat sb;
+    if (stat(dir.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))
+    {
+        DIR *pDIR;
+        struct dirent *entry;
+        if( (pDIR=opendir(dir.c_str())) )
+        {
+            while( (entry = readdir(pDIR)) )
+            {
+                if( strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 )
+                {
+                    std::cout << entry->d_name << std::endl;
+                }
+            }
+            closedir(pDIR);
+        }
+    }
+}
+
+void execute_algatorc(const char* proj, const std::string &alg, const std::string test_set)
+{
+    //
+    std::string proj_dir = getenv(ALGATOR_ROOT); proj_dir.append("/data_root/projects/PROJ-");
+    proj_dir.append(proj); proj_dir.append("/");
+    std::string test_set_path = proj_dir; test_set_path.append("tests/");
+    test_set_path.append(test_set); test_set_path.append(".atts");
+
+    ETestSet *tests = new ETestSet(test_set_path);
+    std::string test_set_file = proj_dir; test_set_file.append("tests/"); test_set_file.append(tests->get_test_set_description_file());
+
+
+
+    std::cout << "EXECUTING ALGATORC" << std::endl;
+    std::string project_lib = proj_dir; project_lib.append("lib/libProject.so");
+    sleep(2);
+    void *handle = dlopen(project_lib.c_str(), RTLD_LAZY);
+    if (handle)
+    {
+        create_alg = (AbsAlgorithm* (*)())dlsym(handle, "create_algorithm_object");
+        destroy_alg = (void(*)(AbsAlgorithm*))dlsym(handle, "destroy_algorithm_object");
+    	create_it = (TestSetIterator* (*)())dlsym(handle, "create_iterator_object");
+    	destroy_it = (void(*)(TestSetIterator*))dlsym(handle, "destroy_iterator_object");
+    	AbsAlgorithm *a = (AbsAlgorithm*)create_alg();
+    	TestSetIterator *it = (TestSetIterator*)create_it();
+    	//TestSetIterator *it = new SortingTestSetIterator();
+
+        it->set_project_name(strdup(proj));
+        it->set_test_set(*tests);
+        while(it->has_next())
+        {
+            it->read_next();
+            std::cout << it->current_input_line << std::endl;
+        }
+	}
+}
+
+//! Create new algatorc project
+//! \param const char *proj_name name of the project
+//! \return bool return true if project is successfuly created
+bool create_project(const char *proj_name)
+{
+    //PROJ-argv[2]/{libs, tests, proj/{src, include}}
+    char buff[500];
+    sprintf(buff, "mkdir -p %s/data_root/projects/PROJ-%s/tests", getenv(ALGATOR_ROOT), proj_name);
+    LOG(INFO) << "Creating new project " << proj_name;
+    if (!execute_system_command(buff))
+    {
+        return false;
+    }
+
+    sprintf(buff, "mkdir -p %s/data_root/projects/PROJ-%s/lib/", getenv(ALGATOR_ROOT), proj_name);
+    if (!execute_system_command(buff))
+    {
+        return false;
+    }
+
+    sprintf(buff, "mkdir -p %s/data_root/projects/PROJ-%s/proj/src", getenv(ALGATOR_ROOT), proj_name);
+    if (!execute_system_command(buff))
+    {
+        return false;
+    }
+
+    //create files
+    sprintf(buff, "touch %s/data_root/projects/PROJ-%s/tests/TestSet1.atts", getenv(ALGATOR_ROOT), proj_name);
+    if (!execute_system_command(buff))
+    {
+        return false;
+    }
+
+    sprintf(buff, "touch %s/data_root/projects/PROJ-%s/tests/testset1.txt", getenv(ALGATOR_ROOT), proj_name);
+    if (!execute_system_command(buff))
+    {
+        return false;
+    }
+
+    //create source files content
+    sprintf(buff, "%s/data_root/projects/PROJ-%s/proj/src/%sTestCase.cpp", getenv(ALGATOR_ROOT), proj_name, proj_name);
+    std::ofstream test_case_file(buff);
+    if (test_case_file.is_open())
+    {
+        test_case_file << "#include<iostream>" << std::endl;
+        test_case_file << "#include<TestCase.hpp>" << std::endl << std::endl;
+        sprintf(buff, "class %sTestCase : public TestCase {", proj_name);
+        test_case_file << buff << std::endl;
+        test_case_file << "public: " << std::endl;
+        test_case_file << "\tstd::string print() { " << std::endl;
+        test_case_file << "\t\t //TODO: implement method" << std::endl;
+        test_case_file << "\t}" << std::endl;
+        test_case_file << "};";
+        test_case_file.close();
+    }else
+    {
+        LOG(ERROR) << "Can't write content to file " << buff;
+        return false;
+    }
+
+    sprintf(buff, "%s/data_root/projects/PROJ-%s/proj/src/%sTestSetIterator.cpp", getenv(ALGATOR_ROOT), proj_name, proj_name);
+    std::ofstream test_set_file(buff);
+    if (test_set_file.is_open())
+    {
+        test_set_file << "#include <iostream>" << std::endl;
+        test_set_file << "#include <TestSetIterator.hpp>" << std::endl << std::endl;
+        sprintf(buff, "class %sTestSetIterator : public TestSetIterator {", proj_name);
+        test_set_file << buff << std::endl;
+        test_set_file << "public: " << std::endl;
+        test_set_file << "\tTestCase *get_current(){" << std::endl;
+        test_set_file << "\t\t //TODO: implement method" << std::endl;
+        test_set_file << "\t\t return nullptr; \n\t}\n};" << std::endl << std::endl;
+        test_set_file << "#ifdef __cplusplus" << std::endl << "extern \"C\" {" << std::endl << "#endif" << std::endl;
+        test_set_file << "TestSetIterator * create_iterator_object() {" << std::endl;
+        std::string s = "\treturn new "; s.append(proj_name); s.append("TestSetIterator;");
+        test_set_file << s << std::endl << "}" << std::endl << std::endl;
+        test_set_file << "void destroy_iterator_object(TestSetIterator* object) {" << std::endl;
+        test_set_file << "\tdelete object;" << std::endl;
+        test_set_file << "}" << std::endl;
+        test_set_file << "#ifdef __cplusplus" << std::endl << "}" << std::endl << "#endif";
+        test_set_file.close();
+    }else
+    {
+        LOG(ERROR) << "Can't write content to file " << buff;
+        return false;
+    }
+
+    sprintf(buff, "%s/data_root/projects/PROJ-%s/proj/src/%sAbsAlgorithm.cpp", getenv(ALGATOR_ROOT), proj_name, proj_name);
+    std::ofstream abs_algorithm_file(buff);
+    if (abs_algorithm_file.is_open())
+    {
+        abs_algorithm_file << "#include <iostream>" << std::endl;
+        abs_algorithm_file << "#include <AbsAlgorithm.hpp>" << std::endl;
+        sprintf(buff, "#include \"%sTestCase.cpp\"", proj_name);
+        abs_algorithm_file << buff << std::endl;
+        sprintf(buff, "class %sAbsAlgorithm : public AbsAlgorithm {", proj_name);
+        abs_algorithm_file << buff << std::endl;
+        sprintf(buff, "\t%sTestCase %s_test_case;", proj_name, proj_name);
+        abs_algorithm_file << "private: " << std::endl;
+        abs_algorithm_file << buff << std::endl;
+        abs_algorithm_file << "public:" << std::endl;
+        abs_algorithm_file << "\tbool init (TestCase &test) {\n\t\t //TODO: implement method\n\t\t return true; \n\t}" << std::endl << std::endl;
+        abs_algorithm_file << "\tvoid run() {\n\t\t //TODO: Implement method \n\t}" << std::endl << std::endl;
+        abs_algorithm_file << "\tvoid done() {\n\t\t //TODO: Implement method \n\t}" << std::endl;
+        abs_algorithm_file << "};";
+        abs_algorithm_file.close();
+    }else
+    {
+        LOG(ERROR) << "Can't write content to file " << buff;
+        return false;
+    }
+
+    return true;
+}
+
+//! Create new algorithm in project
+//! \param const char *proj_name name of the project
+//! \param const char *alg_name name of algorithm you want to create
+//! \return bool return true if algorithm is successfuly created
+bool create_algorithm(const char *proj_name, const char *alg_name)
+{
+    struct stat sb;
+    std::string buff = getenv(ALGATOR_ROOT); buff.append("/data_root/projects/PROJ-"); buff.append(proj_name);
+    if (stat(buff.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))
+    {
+        //PROJ-proj_name/algs/alg_name/src
+        LOG(INFO) << "Creating algorithm " << alg_name << " in project " << proj_name;
+        buff = "mkdir -p "; buff.append(getenv(ALGATOR_ROOT)); buff.append("/data_root/projects/PROJ-");
+        buff.append(proj_name); buff.append("/algs/ALG-"); buff.append(alg_name); buff.append("/src/");
+        if (!execute_system_command(buff.c_str()))
+        {
+            return false;
+        }
+
+        //fill content of files
+        buff = getenv(ALGATOR_ROOT); buff.append("/data_root/projects/PROJ-"); buff.append(proj_name);
+        buff.append("/algs/ALG-"); buff.append(alg_name); buff.append("/src/"); buff.append(alg_name);
+        buff.append("Algorithm.cpp");
+        
+        std::ofstream file(buff.c_str());
+        if (file.is_open())
+        {
+            file << "#include <iostream>" << std::endl;
+            buff = "../../../proj/src/"; buff.append(proj_name); buff.append("AbsAlgorithm.cpp");
+            file << "#include \"" << buff << "\"" << std::endl << std::endl;
+            buff = "class "; buff.append(alg_name); buff.append("Algorithm : public "); buff.append(proj_name);
+            buff.append("AbsAlgorithm {");
+            file << buff << std::endl;
+            file << "public:" << std::endl;
+            file << "\tvoid execute() {";
+            file << "\t\t //Implement you algorithm here" << std::endl;
+            file << "\t}" << std::endl;
+            file << "};" << std::endl << std::endl;
+            file << "#ifdef __cplusplus" << std::endl << "extern \"C\" {" << std::endl << "#endif" << std::endl;
+            file << "AbsAlgorithm * create_algorithm_object() {" << std::endl;
+            buff = "\treturn new "; buff.append(alg_name); buff.append("Algorithm;");
+            file << buff << std::endl << "}" << std::endl << std::endl;
+            file << "void destroy_algorithm_object(AbsAlgorithm* object) {" << std::endl;
+            file << "\tdelete object;" << std::endl;
+            file << "}" << std::endl;
+            file << "#ifdef __cplusplus" << std::endl << "}" << std::endl << "#endif";
+            file.close();
+
+        }else
+        {
+            LOG(ERROR) << "Can't create content of " << buff;
+            return false;
+        }
+
+        //create JSON content
+        buff = getenv(ALGATOR_ROOT); buff.append("/data_root/projects/PROJ-"); buff.append(proj_name);
+        buff.append("/algs/ALG-"); buff.append(alg_name); buff.append("/"); buff.append(alg_name);
+        buff.append(".atal");
+        std::ofstream json_file(buff.c_str());
+        if (json_file.is_open())
+        {
+            json_file << "{" << std::endl;
+            json_file << "\tAlgorithm : {" << std::endl;
+            char temp[100];
+            sprintf(temp, "\t\tShortName\t\t : \"%s\",", alg_name);
+            json_file << temp << std::endl;
+            json_file << "\t\tDescription\t\t : \"\"," << std::endl;
+            json_file << "\t\tHTMLDescFile\t\t : \"\"," << std::endl;
+            json_file << "\t\tAuthor\t\t : \"\"," << std::endl;
+            json_file << "\t\tDate\t\t : \"\"" << std::endl;
+            json_file << "\t}" << std::endl;
+            json_file << "}" << std::endl;
+            json_file.close();
+        }else
+        {
+            LOG(ERROR) << "Can't create content of " << buff;
+            return false;
+        }
+
+        LOG(INFO) << "Algorithm " << alg_name << " in project " << proj_name << " is succesfuly created";
+        return true;
+    }else
+    {
+        LOG(ERROR) << "Project " << proj_name << "doesn't exist";
+        return false;
+    }
+    return false;
+}
+
+void show_help()
+{
+    system("man algatorc");
+}
+
+
+#include <typeinfo>
+//argv[0] == executable name
+//argv[1] == option
+//argv[2] == PROJECT name
+
+//--execute
+//argv[3] == ALGORITHM name (BubbleSort)
+//argv[4] == TestCase file (TestCase1)
+
+//--add_algorithm
+//argv[3] == ALGORITHM_name (BubbleSort)
+int main(int argc, const char *argv[])
+{
+
+	easyloggingpp::Configurations defaultConf;
+	defaultConf.setToDefault();
+
+    if (argc == 3)
+    {
+        if (strcmp(argv[1], "-n") == 0 || strcmp(argv[1], "--new_project") == 0)
+        {
+                if (!create_project(argv[2]))
+                {
+                    return 8;
+                }
+        }else
+        {
+            LOG(ERROR) << "Check -h or --help for usage of algatorc";
+            return 7;
+        }
+    }
+    else if (argc == 2)
+    {
+        if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
+        {
+            show_help();
+        }
+        else if (strcmp(argv[1], "-v") == 0|| strcmp(argv[1], "--version") == 0)
+        {
+            std::cout << "algatorc 0.1" << std::endl;
+        }
+        else
+        {
+            LOG(ERROR) << "Check -h or --help for usage of algatorc";
+        }
+    }
+    else if (argc > 3)
+    {
+        if (strcmp(argv[1], "-a") == 0 || strcmp(argv[1], "--add_algorithm") == 0)
+        {
+            for (int i = 3; i<argc; i++)
+            {
+                if (!create_algorithm(argv[2], argv[i]))
+                {
+                    return 8;
+                }
+            }
+        }
+        else if ((strcmp(argv[1], "-e") == 0 || strcmp(argv[1], "--execute") == 0) && argc == 5)
+        {
+            LOG(INFO) << "===== START =====";
+            struct stat sb;
+            std::string lib_dir = getenv(ALGATOR_ROOT);
+            lib_dir.append("/data_root/projects/PROJ-"); lib_dir.append(argv[2]); lib_dir.append("/lib/");
+            if (stat(lib_dir.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))
+            {
+                DIR *pDIR;
+                struct dirent *entry;
+                if( (pDIR=opendir(lib_dir.c_str())) )
+                {
+                    bool build_library = true;
+                    while( (entry = readdir(pDIR)) )
+                    {
+                        std::string lib_name = "libProject.so";
+                        if( strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0 )
+                        {
+                            if (strcmp(entry->d_name, lib_name.c_str()) == 0)
+                            {
+                                std::string lib_path = lib_dir + lib_name;
+
+                                std::string proj_dir = getenv(ALGATOR_ROOT); proj_dir.append("/data_root/projects/PROJ-");
+                                proj_dir.append(argv[2]); proj_dir.append("/");
+
+                                std::string test_case_src = proj_dir; test_case_src.append("/proj/src/");
+                                test_case_src.append(argv[2]); test_case_src.append("TestCase.cpp");
+
+                                std::string test_set_src = proj_dir; test_set_src.append("/proj/src/");
+                                test_set_src.append(argv[2]); test_set_src.append("TestSetIterator.cpp");
+
+                                std::string abs_alg_src = proj_dir; abs_alg_src.append("/proj/src/");
+                                abs_alg_src.append(argv[2]); abs_alg_src.append("AbsAlgorithm.cpp");
+
+                                std::string alg_src = proj_dir; alg_src.append("/algs/ALG-"); alg_src.append(argv[3]);
+                                alg_src.append("/src/"); alg_src.append(argv[3]); alg_src.append("Algorithm.cpp");
+
+                                build_library = !(!build_lib(lib_path, test_case_src) && !build_lib(lib_path, test_set_src) && !build_lib(lib_path, abs_alg_src) && !build_lib(lib_path, alg_src));
+                            }
+                        }
+                    }
+                    closedir(pDIR);
+
+                    if (build_library)
+                    {
+                        LOG(INFO) << "Need to build project library";
+                        if (!build_project_shared_library(argv[2], argv[3]))
+                        {
+                            return 10;
+                        }
+                        LOG(INFO) << "Library was successfuly build";
+                    }
+
+                    execute_algatorc(argv[2], argv[3], argv[4]);
+                }
+            }else
+            {
+                LOG(INFO) << "Creating lib folder";
+
+                char *buff;
+                sprintf(buff, "{ mkdir -p %s/data_root/projects/PROJ-%s/lib/ && echo $? ;} echo $?", getenv(ALGATOR_ROOT), argv[2]);
+                FILE *fp = popen(buff, "r");
+                if (fp != NULL)
+                {
+                    if (fgets(buff, sizeof(buff), fp))
+                    {
+                        std::string s = buff;
+                        if (std::atoi(s.c_str()) == 0)
+                        {
+                            char buff[500];
+                            sprintf(buff, "%s/data_root/projects/PROJ-%s/algs/ALG-%s/src/%sAlgorithm.cpp", getenv(ALGATOR_ROOT), argv[2], argv[3], argv[3]);
+                            if (build_project_shared_library(argv[2], argv[3])) //&& build_library_from_source(buff, argv[1])
+                            {
+                                execute_algatorc(argv[2], argv[3], argv[4]);
+                            }
+                        }else
+                        {
+                            LOG(ERROR) << "Can't create libs folder.";
+                            return 2;
+                        }
+                    }
+                }else
+                {
+                    LOG(ERROR) << "Can't create lib folder. Try with root privileges";
+                    return 2;
+                }
+            }
+        }
+        else
+        {
+            LOG(ERROR) << "Check -h or --help for usage of algatorc";
+            return 9;
+        }
+    }
+    else
+    {
+        LOG(ERROR) << "Wrong usage of algatorc. Try typing algatorc -h or algatorc --help";
+        return 9;
+    }
+
+	return 0;
+}
