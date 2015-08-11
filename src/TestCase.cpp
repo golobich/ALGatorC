@@ -12,9 +12,9 @@ TestCase::~TestCase()
 	delete &parameters;
 }
 
-ParameterSet TestCase::get_parameters()
+ParameterSet* TestCase::get_parameters()
 {
-    return parameters;
+    return &parameters;
 }
 
 void TestCase::add_parameter(EParameter &param)

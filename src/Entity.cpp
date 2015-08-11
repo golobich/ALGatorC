@@ -25,7 +25,7 @@ void Entity::init(const std::string &entity_id, std::vector<std::string> &field_
     this->entity_file_ext = "?";
     this->entity_rootdir = "?";
     
-    for (int i = 0; i<field_names.size(); i++)
+    for (unsigned int i = 0; i<field_names.size(); i++)
     {
         this->field_names.insert(field_names.at(i));
         //printf("%s\n", field_names.at(i).c_str());
@@ -69,12 +69,8 @@ bool Entity::init_from_file(const std::string &fname)
             {
                 object = value->AsObject();
                 std::wstring tmp = from_string(entity_id);
-                std::wcout << tmp << std::endl;
-                std::wcout.flush();
                 if (object.find(tmp.c_str()) != object.end())
                 {
-                    std::wcout << tmp << std::endl;
-                    std::wcout.flush();
                     init_from_json(object[tmp.c_str()]->AsObject());
                 }
                 else
@@ -103,7 +99,7 @@ bool Entity::init_from_json(JSONObject object)
     {
         std::string key = *it;
         std::wstring ws;
-        for (int i = 0; i<key.length(); i++)
+        for (unsigned int i = 0; i<key.length(); i++)
             ws += wchar_t(key[i]);
         if (object.find(ws) != object.end())
         {
@@ -162,7 +158,7 @@ void Entity::set(const std::string &key, const std::string &value)
 
 void Entity::set_representatives(const std::vector<std::string> repr)
 {
-    for (int i = 0; i<repr.size(); i++)
+    for (unsigned int i = 0; i<repr.size(); i++)
     {
         representatives.push_back(repr.at(i));
     }
@@ -171,7 +167,7 @@ void Entity::set_representatives(const std::vector<std::string> repr)
 std::string Entity::print()
 {
     std::string desc = get_name();
-    for (int i = 0; i<representatives.size(); i++)
+    for (unsigned int i = 0; i<representatives.size(); i++)
     {
         if (desc.empty())
             desc += "";
@@ -186,7 +182,7 @@ std::string Entity::print()
 std::wstring Entity::from_string(std::string &content)
 {
     std::wstring result;
-    for (int i = 0; i<content.length(); i++)
+    for (unsigned int i = 0; i<content.length(); i++)
         result += wchar_t(content[i]);
     return result;
 }

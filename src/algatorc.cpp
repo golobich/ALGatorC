@@ -36,7 +36,29 @@ extern "C" {
 
 const char *ALGATOR_ROOT = "ALGATOR_ROOT";
 
-std::vector<std::wstring> get_result_parameters(const std::string &f_name)
+bool write_to_atts(const std::string &f, const char *test_name)
+{
+    std::ofstream file(f);
+    if (file.is_open())
+    {
+        file << "{\"TestSet\" : {" << std::endl;
+        file << "\t\"ShortName\" : \"...\"," << std::endl;
+        file << "\t\"Description\" : \"...\"," << std::endl;
+        file << "\t\"HTMLDescFile\" : \"...\"," << std::endl;
+        file << "\t\"N\" : 1," << std::endl;
+        file << "\t\"TestRepeat\" : 1," << std::endl;
+        file << "\t\"QuickTest\" : true," << std::endl;
+        file << "\t\"TestSetFiles\" : [...]," << std::endl;
+        file << "\t\"DescriptionFile\" : \"" << test_name << ".txt" << "\"," << std::endl;
+        file << "\t}" << std::endl;
+        file << "}";
+        file.close();
+        return true;
+    }
+    return false;
+}
+
+std::map<std::string, std::vector<std::wstring>> get_result_parameters(const std::string &f_name)
 {
 	std::string content = "";
 	std::ifstream f(f_name);
@@ -52,7 +74,7 @@ std::vector<std::wstring> get_result_parameters(const std::string &f_name)
 	}
 
 
-    std::vector<std::wstring> res;
+    std::map<std::string, std::vector<std::wstring>> res;
     std::string delimiter;
     JSONValue *value = JSON::Parse(content.c_str());
     if (value == NULL)
@@ -74,6 +96,9 @@ std::vector<std::wstring> get_result_parameters(const std::string &f_name)
                     if (object[ws]->IsString())
                     {
                         std::wstring format (object[ws]->AsString());
+                        std::vector<std::wstring> tmp_v;
+                        tmp_v.push_back(format);
+                        res["Format"] = tmp_v;
                         std::string tmp (format.begin(), format.end());
                         if (tmp != "CSV")
                         {
@@ -96,6 +121,9 @@ std::vector<std::wstring> get_result_parameters(const std::string &f_name)
                     {
                         std::wstring del (object[ws]->AsString());
                         std::string tmp (del.begin(), del.end());
+                        std::vector<std::wstring> tmp_v;
+                        tmp_v.push_back(del);
+                        res["Delimiter"] = tmp_v;
                         delimiter = tmp;
                     }else
                     {
@@ -113,10 +141,12 @@ std::vector<std::wstring> get_result_parameters(const std::string &f_name)
                     if (object[ws]->IsArray())
                     {
                         JSONArray arr = object[ws]->AsArray();
-                        for (int i = 0; i<arr.size(); i++)
+                        std::vector<std::wstring> tmp_v;
+                        for (unsigned int i = 0; i<arr.size(); i++)
                         {
-                            res.push_back(arr[i]->Stringify());
+                            tmp_v.push_back(arr[i]->Stringify());
                         }
+                        res["TestParameters"] = tmp_v;
                     }else
                     {
                         LOG(ERROR) << "TestParameters field must be array";
@@ -133,10 +163,12 @@ std::vector<std::wstring> get_result_parameters(const std::string &f_name)
                     if (object[ws]->IsArray())
                     {
                         JSONArray arr = object[ws]->AsArray();
-                        for (int i = 0; i<arr.size(); i++)
+                        std::vector<std::wstring> tmp_v;
+                        for (unsigned int i = 0; i<arr.size(); i++)
                         {
-                            res.push_back(arr[i]->Stringify());
+                            tmp_v.push_back(arr[i]->Stringify());
                         }
+                        res["ResultParameters"] = tmp_v;
                     }else
                     {
                         LOG(ERROR) << "Field ResultParameters must be array";
@@ -171,6 +203,7 @@ std::string get_project_dir(std::string proj_name)
 
 bool execute_system_command(const char *cmd)
 {
+    LOG(INFO) << "Executing cmd: \"" << cmd << "\"";
     const int err = system(cmd);
     if (err == -1)
     {
@@ -233,11 +266,11 @@ void print_dir(const std::string &dir)
     }
 }
 
-bool contains(std::string *tab, int size, std::string key)
+bool contains(std::vector<std::string> &set, std::string key)
 {
-    for (int i = 0; i<size; i++)
+    for (unsigned int i = 0; i<set.size(); i++)
     {
-        std::string tmp = tab[i];
+        std::string tmp = set.at(i);
         std::transform(tmp.begin(), tmp.end(), tmp.begin(), ::tolower);
         //std::cout << "Searching for " << key << " in " << tmp << std::endl;
         if (tmp == key)
@@ -250,32 +283,49 @@ bool contains(std::string *tab, int size, std::string key)
     return false;
 }
 
-void write_result(const char* proj_name, const std::string &alg_name, const std::string test_set, std::vector<std::wstring> params, std::chrono::duration<double> *times, int size, int test_num, bool done)
+void write_result(const char* proj_name, const std::string &alg_name, const std::string test_set, std::map<std::string, std::vector<std::wstring>> params, std::chrono::duration<double> *times, int size, int test_num, bool done, TestCase *t_case)
 {
-    //LOG(INFO) << "Writing to results for test #" << test_num;
+    LOG(INFO) << "Writing to results for test #" << test_num;
 
 	std::string file = get_project_dir(proj_name); file.append("results/"); file.append(alg_name);
 	file.append("-"); file.append(test_set); file.append(".em");
 	std::ofstream f(file, std::ios_base::app);
-    int param_size = params.size() + 4;
-	std::string parameters[param_size];
-	parameters[0] = alg_name;
-	parameters[1] = test_set;
-	parameters[2] = "Test-" + std::to_string(test_num);
-	parameters[3] = "Done";
-	for (int i = 0; i<params.size(); i++)
-	{
-        std::wstring s = params.at(i);
-        std::string tmp (s.begin()+1, s.end()-1);
-        parameters[i+4] = tmp;
-	}
+	std::vector<std::string> parameters;
+	parameters.push_back(alg_name);
+	parameters.push_back(test_set);
+	parameters.push_back("Done");
+    std::vector<std::wstring> tmp_v1 = params["Format"];
+    std::wstring ws_f = tmp_v1.at(0);
+    tmp_v1 = params["Delimiter"];
+    std::wstring tmp_s = tmp_v1.at(0);
+    ParameterSet *parameters_set = t_case->get_parameters();
+    
+    std::string format = "CSV";
+    std::string delimiter = ";";
+    //std::string format(ws_f.begin(), ws_f.end());
+    //std::string delimiter(tmp_s.begin(), tmp_s.end());
+    parameters.push_back(parameters_set->print_for_results(format, delimiter[0]));
 
+    
+    for (std::map<std::string, std::vector<std::wstring>>::iterator it = params.begin(); it != params.end(); ++it)
+    {
+        if (it->first == "TestParameters" || it->first == "ResultParameters")
+        {
+            std::vector<std::wstring> tmp_v = params[it->first];
+        	for (unsigned int i = 0; i<tmp_v.size(); i++)
+        	{
+                std::wstring s = tmp_v.at(i);
+                std::string tmp (s.begin()+1, s.end()-1);
+                parameters.push_back(tmp);
+        	}
+        }
+    }
 
-    bool t_max = contains(parameters, param_size, "tmax");
-    bool t_min = contains(parameters, param_size, "tmin");
-    bool t_avg = contains(parameters, param_size, "tavg");
-    bool t_sum = contains(parameters, param_size, "tsum");
-    bool check = contains(parameters, param_size, "check");
+    bool t_max = contains(parameters, "tmax");
+    bool t_min = contains(parameters, "tmin");
+    bool t_avg = contains(parameters, "tavg");
+    bool t_sum = contains(parameters, "tsum");
+    bool check = contains(parameters, "check");
     std::chrono::duration<double> min, max, avg, sum;
     min = times[0]; max = times[0]; sum = times[0];
     for (int i = 1; i<size; i++)
@@ -293,34 +343,34 @@ void write_result(const char* proj_name, const std::string &alg_name, const std:
     avg = sum / size;
 	if (f.is_open())
 	{
-        f << parameters[0] << ";";
-        f << parameters[1] << ";";
-        f << parameters[2] << ";";
-        f << parameters[3] << ";";
+        f << parameters.at(0) << delimiter;
+        f << parameters.at(1) << delimiter;
+        f << parameters.at(2) << delimiter;
+        f << parameters.at(3);
         if (t_min)
         {
-            f << min.count() * 1000 << ";";
+            f << min.count() * 1000 << delimiter;
         }
         if (t_max)
         {
-            f << max.count() * 1000 << ";";
+            f << max.count() * 1000 << delimiter;
         }
         if (t_avg)
         {
-            f << avg.count() * 1000 << ";";
+            f << avg.count() * 1000 << delimiter;
         }
         if (t_sum)
         {
-            f << sum.count() * 1000 << ";";
+            f << sum.count() * 1000 << delimiter;
         }
         if (check)
         {
             if (done)
             {
-                f << "OK" << ";";
+                f << "OK" << delimiter;
             }else
             {
-                f << "NOK" << ";";
+                f << "NOK" << delimiter;
             }
         }
         f << std::endl;
@@ -370,7 +420,7 @@ void execute_algatorc(const char* proj, const std::string &alg, const std::strin
         std::string file = get_project_dir(proj); file.append("proj/"); file.append(proj);
         file.append("-em.atrd");
 
-        std::vector<std::wstring> v = get_result_parameters(file);
+        std::map<std::string, std::vector<std::wstring>> v = get_result_parameters(file);
         TestCase *t_case;
         int cnt = 0;
         while(it->has_next())
@@ -398,7 +448,6 @@ void execute_algatorc(const char* proj, const std::string &alg, const std::strin
                             alg_ok = false;
                             break;
                         }
-						
 					}else
 					{
 						LOG(ERROR) << "Error occured while trying to init TestCase";
@@ -407,7 +456,9 @@ void execute_algatorc(const char* proj, const std::string &alg, const std::strin
             	}
             }
             if (executed)
-                write_result(proj, alg, test_set, v, alg_time, repeat, cnt, alg_ok);
+            {
+                write_result(proj, alg, test_set, v, alg_time, repeat, cnt, alg_ok, t_case);
+            }
         }
         destroy_alg(a);
         destroy_it(it);
@@ -448,20 +499,9 @@ bool create_project(const char *proj_name)
     }
 
     s = get_project_dir(proj_name); s.append("tests/TestSet1.atts");
-    std::ofstream test_file(s);
-    if (test_file.is_open())
+    if (!write_to_atts(s, "TestSet1"))
     {
-    	test_file << "{\"TestSet\" : {" << std::endl;
-    	test_file << "\t\"ShortName\" : \"...\"," << std::endl;
-    	test_file << "\t\"Description\" : \"...\"," << std::endl;
-    	test_file << "\t\"HTMLDescFile\": \"...\"," << std::endl;
-    	test_file << "\t\"N\": \"...\"," << std::endl;
-    	test_file << "\t\"TestRepeat\" : \"...\"," << std::endl;
-    	test_file << "\t\"QuickTest\" : \"...\"," << std::endl;
-    	test_file << "\t\"TestSetFiles\" : \"...\"," << std::endl;
-    	test_file << "\t\"DescriptionFile\" : \"...\"," << std::endl;
-    	test_file << "\t}\n}";
-    	test_file.close();
+        return false;
     }
 
     //create source files content
@@ -578,7 +618,7 @@ bool create_algorithm(const char *proj_name, const char *alg_name)
     {
         //PROJ-proj_name/algs/alg_name/src
         LOG(INFO) << "Creating algorithm " << alg_name << " in project " << proj_name;
-        buff = "mkdir -p "; get_project_dir(proj_name); buff.append("algs/ALG-"); buff.append(alg_name); buff.append("/src/");
+        buff = "mkdir -p "; buff.append(get_project_dir(proj_name)); buff.append("algs/ALG-"); buff.append(alg_name); buff.append("/src/");
         if (!execute_system_command(buff.c_str()))
         {
             return false;
@@ -654,13 +694,58 @@ bool create_algorithm(const char *proj_name, const char *alg_name)
     return false;
 }
 
-void show_help()
+bool dir_exist(const char *dir)
 {
-    system("man algatorc");
+    struct stat sb;
+    return stat(dir, &sb) == 0 && S_ISDIR(sb.st_mode);
+}
+
+bool create_test_set(const char *proj_name, const char *test_name)
+{
+    std::string proj_dir = get_project_dir(proj_name);
+    if (dir_exist(proj_dir.c_str()))
+    {
+        std::string cmd;
+        std::string test_dir = proj_dir; test_dir.append("tests/");
+        if (!dir_exist(test_dir.c_str()))
+        {
+            cmd = "mkdir -p "; cmd.append(test_dir); 
+            if (!execute_system_command(cmd.c_str()))
+            {
+                LOG(ERROR) << "Can't create tests folder";
+                return false;
+            }
+        }
+        
+        cmd = "touch "; cmd.append(test_dir); cmd.append(test_name); cmd.append(".txt");
+        if (!execute_system_command(cmd.c_str()))
+        {
+            return false;
+        }
+        std::string f = test_dir; f.append(test_name); f.append(".atts");
+        if (!write_to_atts(f, test_name))
+        {
+            LOG(ERROR) << "Can't write to atts file " << f;
+            return false;
+        }
+
+        std::cout << "TestSet " << test_name << " was successfuly created in project " << proj_name << std::endl;
+        return true;
+    }else
+    {
+        std::cout << "Project " << proj_dir << " doesn't exist" << std::endl;
+        return false;
+    }
+    return false;
+}
+
+bool show_help()
+{
+    return execute_system_command("man algatorc");
 }
 
 
-#include <typeinfo>
+//#include <typeinfo>
 //argv[0] == executable name
 //argv[1] == option
 //argv[2] == PROJECT name
@@ -671,6 +756,9 @@ void show_help()
 
 //--add_algorithm
 //argv[3] == ALGORITHM_name (BubbleSort)
+
+//--add_test
+//argv[3] == TESTSET_name (TestSet1)
 int main(int argc, const char *argv[])
 {
 
@@ -695,11 +783,14 @@ int main(int argc, const char *argv[])
     {
         if (strcmp(argv[1], "-h") == 0 || strcmp(argv[1], "--help") == 0)
         {
-            show_help();
+            if (!show_help())
+            {
+                return 36;
+            }
         }
         else if (strcmp(argv[1], "-v") == 0|| strcmp(argv[1], "--version") == 0)
         {
-            std::cout << "algatorc 0.1" << std::endl;
+            std::cout << "algatorc 1.0" << std::endl;
         }
         else
         {
@@ -715,6 +806,16 @@ int main(int argc, const char *argv[])
                 if (!create_algorithm(argv[2], argv[i]))
                 {
                     return 8;
+                }
+            }
+        }
+        else if (strcmp(argv[1], "-t") == 0 || strcmp(argv[1], "--add_test") == 0)
+        {
+            for (int i = 3; i<argc; i++)
+            {
+                if (!create_test_set(argv[2], argv[i]))
+                {
+                    return 42; 
                 }
             }
         }

@@ -23,7 +23,7 @@ public:
     
     //! Get all parameters
     //! \return ParameterSet
-    ParameterSet get_parameters();
+    ParameterSet *get_parameters();
     
     //! Print TestCase
     //! \return string

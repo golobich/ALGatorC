@@ -10,7 +10,7 @@
 
 ParameterSet::ParameterSet(ParameterSet &params)
 {
-    for (int i = 0; i<params.size(); i++)
+    for (unsigned int i = 0; i<params.size(); i++)
     {
         EParameter *p = params.get_parameter(i);
         if (p != nullptr)
@@ -39,7 +39,7 @@ void ParameterSet::add_parameter(EParameter &param, bool replace_existing)
 
 void ParameterSet::add_parameters(ParameterSet &params, bool replace_existing)
 {
-    for (int i = 0; i < params.size(); i++)
+    for (unsigned int i = 0; i < params.size(); i++)
     {
         EParameter *param = params.get_parameter(i);
         if (param != nullptr)
@@ -49,7 +49,7 @@ void ParameterSet::add_parameters(ParameterSet &params, bool replace_existing)
     }
 }
 
-EParameter* ParameterSet::get_parameter(const int &i)
+EParameter* ParameterSet::get_parameter(const unsigned int &i)
 {
     if (i < parameters.size() && i >= 0)
         return &parameters.at(i);
@@ -59,7 +59,7 @@ EParameter* ParameterSet::get_parameter(const int &i)
 
 EParameter* ParameterSet::get_parameter(const std::string &name)
 {
-    for (int i = 0; i<parameters.size(); i++)
+    for (unsigned int i = 0; i<parameters.size(); i++)
     {
         if (parameters.at(i).get(EParameter::id_name) == name)
             return &parameters.at(i);
@@ -76,7 +76,7 @@ size_t ParameterSet::size()
 std::string ParameterSet::print()
 {
     std::string result = "";
-    for (int i = 0; i<parameters.size(); i++)
+    for (unsigned int i = 0; i<parameters.size(); i++)
     {
         if (!result.empty())
             result += "; ";
@@ -84,4 +84,21 @@ std::string ParameterSet::print()
         result += p.get(EParameter::id_name) + " = " + p.get(EParameter::id_value);
     }
     return result;
+}
+
+std::string ParameterSet::print_for_results(std::string format, const char &delimiter)
+{
+    std::transform(format.begin(), format.end(), format.begin(), ::tolower);
+    if (format == "csv")
+    {
+        std::string res = "";
+        for (unsigned int i = 0; i<parameters.size(); i++)
+        {
+            EParameter p = parameters.at(i);
+            res += p.get(EParameter::id_value);
+            res += delimiter;
+        }
+        return res;
+    }
+    return "/";
 }

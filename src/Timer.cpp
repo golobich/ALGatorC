@@ -26,16 +26,6 @@ void Timer::start()
 void Timer::start(const int &i)
 {
     start_time[i] = std::chrono::high_resolution_clock::now();
-    /*
-    if (i <= MAX_TIMERS && i >= 0)
-    {
-        start_time[i] = std::clock();
-    }
-    else
-    {
-        LOG(WARNING) << __FILE__ << "(" << __LINE__ << ") : Null pointer exception in start timer. Given parameter => " << i << ". MAX timers => " << MAX_TIMERS;
-    }
-    */
 }
 
 void Timer::stop()

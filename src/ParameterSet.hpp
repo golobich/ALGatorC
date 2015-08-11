@@ -39,7 +39,7 @@ public:
     //! Get parameter at specified position
     //! \param i
     //! \return EParameter* If specified position is between 0 and size of vector, then the pointer to parameter is returned. Otherwise, function returns null pointer
-    EParameter *get_parameter(const int&);
+    EParameter *get_parameter(const unsigned int&);
     
     //! Get parameter with specified name
     //! \param name
@@ -52,6 +52,9 @@ public:
     
     //! Print ParameterSet
     std::string print();
+
+    //! Print ParameterSet in specified format and with specified delimiter. currently only in CSV
+    std::string print_for_results(std::string, const char&);
     
 private:
     std::vector<EParameter> parameters;
